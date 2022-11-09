@@ -1,0 +1,19 @@
+create external table if not exists employees(name string, surname string, age integer, place struct<name:string, province:string>, programmingSkills array<struct<name:string, description:string, confidenceLevel:integer>>) row format serde "org.apache.hive.hcatalog.data.JsonSerDe" location "/user/master/humanres"; 
+
+create view city as select place.name as name, place.province as province from employees;
+
+create view language as select p.col.name as name, p.col.description as description from (select explode(programmingskills) from employees) p;
+
+create view entity as select name, surname, age, place.name as cname, place.province as cprovince from employees;
+
+create view skills as select name, surname, age, pt.name as lname, pt.description as ldescription, pt.confidencelevel as lconfidencelevel from employees lateral view explode(programmingskills) exploded_table as pt;
+
+
+seconda query
+select cprovince from entity group by cprovince having count(*) = (select min(p.conteggio) from (select count(*) as conteggio from entity group by cprovince) p);
+
+
+create table rskills(name string, surname string, age integer, lname string, ldescription string, lconflevel integer, cname string, cprovince string) row format delimited fields terminated by ",";
+
+
+insert into rskills select s.name, s.surname, s.age, s.lname, s.ldescription, s.lconfidencelevel, e.cname, e.cprovince from skills s inner join entity e ON s.name = e.name and s.surname = e.surname and s.age = e.age;
